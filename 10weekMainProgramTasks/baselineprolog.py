@@ -1,37 +1,41 @@
 import openai
-from janus import Parser, Variable
+from openai import OpenAI
+from pyswip import Prolog
 
-openai.api_key = "--YOUR API KEY--"
+Client = OpenAI(api_key="--YOUR API")
 
 def translate_to_prolog(natural_language):
-    response = openai.ChatCompletion.create(
+    response = Client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that translates natural language to Prolog code. Focus on representing facts and rules about historical figures in computing and their contributions."},
             {"role": "user", "content": f"Translate the following to Prolog, focusing on facts and rules about historical figures in computing: {natural_language}"}
         ]
     )
-    return response.choices[0].message['content'].strip()
+    return response.choices[0].message.content
+
+def clean_prolog_code(prolog_code):
+    # Remove markdown code block markers and any text outside the Prolog code
+    lines = prolog_code.split('\n')
+    cleaned_lines = [line for line in lines if not line.startswith('```') and not line.startswith('The Prolog code')]
+    return '\n'.join(cleaned_lines).strip()
 
 def run_prolog(prolog_code):
-    parser = Parser()
+    prolog = Prolog()
     try:
-        parsed_code = parser.parse(prolog_code)
-        return True, parsed_code
+        prolog.assertz(prolog_code)
+        return True, prolog
     except Exception as e:
         return False, str(e)
 
-def query_prolog(parsed_code, query):
-    X = Variable('X')
+def query_prolog(prolog, query):
     try:
-        # Execute the query
-        results = list(parsed_code.query(query))
+        results = list(prolog.query(query))
         return True, results
     except Exception as e:
         return False, str(e)
 
 def main():
-    # Example natural language input about Ada Lovelace
     natural_language = """
     Ada Lovelace was a mathematician and writer in the 19th century.
     She is often regarded as the first computer programmer.
@@ -44,17 +48,14 @@ def main():
     
     print(f"Natural Language Input:\n{natural_language}")
     
-    # Translate to Prolog
     prolog_code = translate_to_prolog(natural_language)
     print(f"\nTranslated Prolog Code:\n{prolog_code}")
     
-    # Run Prolog code
-    success, parsed_code = run_prolog(prolog_code)
+    success, prolog = run_prolog(prolog_code)
     
     if success:
         print("\nProlog code parsed successfully.")
-        # Query to check if Ada Lovelace is a pioneer in computer science
-        query_success, results = query_prolog(parsed_code, "pioneer_in_computer_science(ada_lovelace)")
+        query_success, results = query_prolog(prolog, "pioneer_in_computer_science(ada_lovelace)")
         if query_success:
             if results:
                 print("Query result: Ada Lovelace is considered a pioneer in computer science.")
@@ -63,7 +64,7 @@ def main():
         else:
             print(f"Error executing query: {results}")
     else:
-        print(f"\nError parsing Prolog code: {parsed_code}")
+        print(f"\nError parsing Prolog code: {prolog}")
 
 if __name__ == "__main__":
     main()
