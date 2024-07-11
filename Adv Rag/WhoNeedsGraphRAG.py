@@ -1,5 +1,5 @@
 import os
-from llama_index import (
+from llama_index.core import (
     VectorStoreIndex,
     KnowledgeGraphIndex,
     StorageContext,
@@ -112,3 +112,66 @@ vector_query_engine = RetrieverQueryEngine(
 
 
 #Step 6: Define the functions to extract entities, query the knowledge graph, and generate the response ... to be continued, building own entities extraction algo from the kg to send it to the vector store
+nlp = spacy.load("en_core_web_sm")
+
+def extract_entities(kg_response):
+    # Convert the response to a string if it's not already
+    text = str(kg_response.response)
+    
+    # Use spaCy for named entity recognition
+    doc = nlp(text)
+    
+    # Extract named entities
+    named_entities = [ent.text.lower() for ent in doc.ents]
+    
+    # Extract noun phrases
+    noun_phrases = [chunk.text.lower() for chunk in doc.noun_chunks]
+    
+    # Combine named entities and noun phrases
+    all_entities = named_entities + noun_phrases
+    
+    # Remove duplicates and single-character entities
+    all_entities = [entity for entity in set(all_entities) if len(entity) > 1]
+    
+    # Count entity occurrences
+    entity_counts = Counter(all_entities)
+    
+    # Filter out common words and keep only the top N entities
+    common_words = set(['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'])
+    relevant_entities = [entity for entity, count in entity_counts.most_common(10) 
+                         if entity not in common_words]
+    
+    return relevant_entities
+
+def query_knowledge(query: str, top_k_kg=5, top_k_vector=3):
+    # Step 1: Query the Knowledge Graph to get relevant entities
+    kg_response = kg_query_engine.query(query)
+    
+    # Extract relevant entities from KG response
+    relevant_entities = extract_entities(kg_response)
+    
+    # Step 2: Use the relevant entities to filter the vector store
+    filtered_nodes = vector_index.retrieve(relevant_entities, top_k=top_k_kg)
+    
+    # Step 3: Perform similarity search on the filtered nodes
+    similar_nodes = vector_index.similarity_search(query, filtered_nodes, top_k=top_k_vector)
+    
+    # Step 4: Generate the final response using the similar nodes
+    response = generate_response(query, similar_nodes)
+    
+    return response
+
+def generate_response(query, similar_nodes):
+    # Combine the similar nodes into a context
+    context = "\n".join([node.get_text() for node in similar_nodes])
+    
+    # Use the LLM to generate a response based on the query and context
+    prompt = f"Given the following context:\n{context}\n\nAnswer the question: {query}"
+    response = ollama_llm(prompt)
+    
+    return response
+
+# Example usage
+query = "Tell me about Peter Quill's role in Guardians of the Galaxy Vol. 3"
+result = query_knowledge(query)
+print(result)
