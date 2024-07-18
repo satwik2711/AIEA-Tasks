@@ -2,7 +2,7 @@ from openai import OpenAI
 from pyswip import Prolog
 import os
 
-client = OpenAI(api_key="sk-proj-W1H7iiHsjxldaIcOM4TGT3BlbkFJAkTBVuszsF2HhYAOAUdO")
+client = OpenAI(api_key="-")
 prolog = Prolog()
 KB_FILE = "knowledge_base.pl"
 
