@@ -1,7 +1,7 @@
 from openai import OpenAI
 from pyswip import Prolog
 
-Client = OpenAI(api_key="sk-proj-UtVtr7bVOwPcpDHLCWFET3BlbkFJ7tQb3XCYEBIlPtYAaw5h")
+Client = OpenAI(api_key="-")
 
 def translate_to_prolog(natural_language):
     response = Client.chat.completions.create(
