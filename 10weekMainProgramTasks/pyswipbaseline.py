@@ -11,7 +11,7 @@ def translate_to_prolog(natural_language):
             {"role": "user", "content": f"Translate the following to Prolog, focusing on facts and rules about historical figures in computing: {natural_language}"}
         ]
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content.strip()
 
 def clean_prolog_code(prolog_code):
     lines = prolog_code.split('\n')
@@ -22,8 +22,9 @@ def run_prolog(prolog, prolog_code):
     try:
         cleaned_code = clean_prolog_code(prolog_code)
         for statement in cleaned_code:
-            if statement.endswith('.'):
-                statement = statement[:-1]  # Remove the trailing dot
+            if not statement.endswith('.'):
+                statement += '.'  # Ensure each statement ends with a dot
+            print(f"Asserting: {statement}")
             prolog.assertz(statement)
         return True, prolog
     except Exception as e:
@@ -57,7 +58,7 @@ def main():
 
     if success:
         print("\nProlog code parsed successfully.")
-        query_success, results_or_error = query_prolog(prolog_or_error, "pioneer_in_computer_science(ada_lovelace)")
+        query_success, results_or_error = query_prolog(prolog_or_error, "pioneer_in_computer_science(ada_lovelace).")
         if query_success:
             if results_or_error:
                 print("Query result: Ada Lovelace is considered a pioneer in computer science.")
