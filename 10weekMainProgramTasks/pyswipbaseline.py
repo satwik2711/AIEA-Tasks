@@ -1,8 +1,7 @@
-
 from openai import OpenAI
-from pyswip import Prolog, Variable
+from pyswip import Prolog
 
-Client = OpenAI(api_key="--YOUR API KEY--")
+Client = OpenAI(api_key="-")
 
 def translate_to_prolog(natural_language):
     response = Client.chat.completions.create(
@@ -14,17 +13,23 @@ def translate_to_prolog(natural_language):
     )
     return response.choices[0].message.content
 
+def clean_prolog_code(prolog_code):
+    lines = prolog_code.split('\n')
+    cleaned_lines = [line.strip() for line in lines if line.strip() and not line.strip().startswith('%') and not line.strip().startswith('`')]
+    return cleaned_lines
+
 def run_prolog(prolog, prolog_code):
     try:
-        for statement in prolog_code.split('.'):
-            if statement.strip():
-                prolog.assertz(statement.strip())
+        cleaned_code = clean_prolog_code(prolog_code)
+        for statement in cleaned_code:
+            if statement.endswith('.'):
+                statement = statement[:-1]  # Remove the trailing dot
+            prolog.assertz(statement)
         return True, prolog
     except Exception as e:
         return False, str(e)
 
 def query_prolog(prolog, query):
-    X = Variable()
     try:
         results = list(prolog.query(query))
         return True, results
@@ -52,7 +57,7 @@ def main():
 
     if success:
         print("\nProlog code parsed successfully.")
-        query_success, results_or_error = query_prolog(prolog_or_error, "pioneer_in_computer_science(ada_lovelace).")
+        query_success, results_or_error = query_prolog(prolog_or_error, "pioneer_in_computer_science(ada_lovelace)")
         if query_success:
             if results_or_error:
                 print("Query result: Ada Lovelace is considered a pioneer in computer science.")
